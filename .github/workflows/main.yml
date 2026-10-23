@@ -2,9 +2,10 @@ name: Bulls Signals Bot
 
 on:
   schedule:
-    - cron: '10 0 * * *'
-    - cron: '10 2 * * *'
-    - cron: '10 4 * * *'
+    - cron: '20 0 * * *'    # 00:20 UTC — حتى مع تأخير ساعتين تبقى داخل النافذة
+    - cron: '20 2 * * *'    # 02:20 UTC
+    - cron: '20 4 * * *'    # 04:20 UTC
+    - cron: '20 6 * * *'    # 06:20 UTC — احتياطية إذا تأخرت التشغيلات السابقة
   workflow_dispatch:
 
 jobs:
@@ -19,11 +20,18 @@ jobs:
         with:
           python-version: '3.12'
 
+      - name: Cache pip packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: pip-${{ '{{' }} hashFiles('requirements.txt') {{ '}}' }}
+          restore-keys: pip-
+
       - name: Cache cooldown file
         uses: actions/cache@v4
         with:
           path: cooldown.json
-          key: bulls-cooldown-${{ github.run_id }}
+          key: bulls-cooldown-${{ '{{' }} github.run_id {{ '}}' }}
           restore-keys: bulls-cooldown-
 
       - name: Install libraries
@@ -31,6 +39,6 @@ jobs:
 
       - name: Run Bot
         env:
-          BOT_TOKEN: ${{ secrets.BOT_TOKEN }}
-          CHANNEL_ID: ${{ secrets.CHANNEL_ID }}
+          BOT_TOKEN: ${{ '{{' }} secrets.BOT_TOKEN {{ '}}' }}
+          CHANNEL_ID: ${{ '{{' }} secrets.CHANNEL_ID {{ '}}' }}
         run: python bulls_signals_bot.py
