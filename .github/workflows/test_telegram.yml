@@ -1,0 +1,25 @@
+name: Test Telegram Connection
+
+on:
+  workflow_dispatch: # يسمح لك بتشغيله يدوياً بضغطة زر
+
+jobs:
+  test-telegram:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install requests library
+        run: pip install requests
+
+      - name: Run Test Script
+        env:
+          TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
+          CHANNEL_ID: ${{ secrets.CHANNEL_ID }}
+        run: python test_telegram.py
