@@ -39,6 +39,6 @@ jobs:
 
       - name: Run Bot
         env:
-          BOT_TOKEN: ${{ '{{' }} secrets.BOT_TOKEN {{ '}}' }}
+          BOT_TOKEN: ${{ '{{' }} secrets.TELEGRAM_TOKEN {{ '}}' }}
           CHANNEL_ID: ${{ '{{' }} secrets.CHANNEL_ID {{ '}}' }}
         run: python bulls_signals_bot.py
