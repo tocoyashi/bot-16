@@ -30,8 +30,9 @@ TP2_PERCENT = 2.0
 # ✅ فلتر شمعة اليوم: جسم أصغر من 0.3% = لا تداول
 MIN_DAILY_BODY = 0.3
 
-# ✅ نافذة التداول: أول 6 ساعات بعد إغلاق الشمعة اليومية (00:00 - 06:00 UTC)
-TRADING_WINDOW_HOURS = 6
+# ✅ نافذة التداول: أول 9 ساعات بعد إغلاق الشمعة اليومية (00:00 - 09:00 UTC)
+# (وسّعت من 6 لتعويض تأخير جدولة GitHub Actions)
+TRADING_WINDOW_HOURS = 9
 
 # Quality Filters
 MIN_ATR_PERCENT = 0.03
@@ -148,7 +149,7 @@ def calculate_atr(df, period=14):
 
 
 def in_trading_window():
-    """أول 6 ساعات بعد إغلاق الشمعة اليومية (00:00 - 06:00 UTC)"""
+    """أول 9 ساعات بعد إغلاق الشمعة اليومية (00:00 - 09:00 UTC)"""
     now_utc = datetime.utcnow()
     return now_utc.hour < TRADING_WINDOW_HOURS
 
