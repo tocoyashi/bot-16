@@ -32,7 +32,7 @@ MIN_DAILY_BODY = 0.3
 
 # ✅ نافذة التداول: أول 9 ساعات بعد إغلاق الشمعة اليومية (00:00 - 09:00 UTC)
 # (وسّعت من 6 لتعويض تأخير جدولة GitHub Actions)
-TRADING_WINDOW_HOURS = 9
+TRADING_WINDOW_HOURS = 18
 
 # Quality Filters
 MIN_ATR_PERCENT = 0.03
