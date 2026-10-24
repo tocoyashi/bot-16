@@ -2,11 +2,26 @@ name: Bulls Signals Bot
 
 on:
   schedule:
-    - cron: '20 0 * * *'    # 00:20 UTC — حتى مع تأخير ساعتين تبقى داخل النافذة
-    - cron: '20 2 * * *'    # 02:20 UTC
-    - cron: '20 4 * * *'    # 04:20 UTC
-    - cron: '20 6 * * *'    # 06:20 UTC — احتياطية إذا تأخرت التشغيلات السابقة
-  workflow_dispatch:
+    # كل 30 دقيقة داخل نافذة التداول (00:00 - 09:00 UTC)
+    - cron: '0 0 * * *'     # 00:00 UTC
+    - cron: '30 0 * * *'    # 00:30 UTC
+    - cron: '0 1 * * *'     # 01:00 UTC
+    - cron: '30 1 * * *'    # 01:30 UTC
+    - cron: '0 2 * * *'     # 02:00 UTC
+    - cron: '30 2 * * *'    # 02:30 UTC
+    - cron: '0 3 * * *'     # 03:00 UTC
+    - cron: '30 3 * * *'    # 03:30 UTC
+    - cron: '0 4 * * *'     # 04:00 UTC
+    - cron: '30 4 * * *'    # 04:30 UTC
+    - cron: '0 5 * * *'     # 05:00 UTC
+    - cron: '30 5 * * *'    # 05:30 UTC
+    - cron: '0 6 * * *'     # 06:00 UTC
+    - cron: '30 6 * * *'    # 06:30 UTC
+    - cron: '0 7 * * *'     # 07:00 UTC
+    - cron: '30 7 * * *'    # 07:30 UTC
+    - cron: '0 8 * * *'     # 08:00 UTC
+    - cron: '30 8 * * *'    # 08:30 UTC
+  workflow_dispatch:        # يسمح بالتشغيل اليدوي
 
 jobs:
   run-bot:
@@ -24,14 +39,14 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ~/.cache/pip
-          key: pip-${{ '{{' }} hashFiles('requirements.txt') {{ '}}' }}
+          key: pip-${{ hashFiles('requirements.txt') }}
           restore-keys: pip-
 
       - name: Cache cooldown file
         uses: actions/cache@v4
         with:
           path: cooldown.json
-          key: bulls-cooldown-${{ '{{' }} github.run_id {{ '}}' }}
+          key: bulls-cooldown-state-v1
           restore-keys: bulls-cooldown-
 
       - name: Install libraries
@@ -39,6 +54,6 @@ jobs:
 
       - name: Run Bot
         env:
-          BOT_TOKEN: ${{ '{{' }} secrets.TELEGRAM_TOKEN {{ '}}' }}
-          CHANNEL_ID: ${{ '{{' }} secrets.CHANNEL_ID {{ '}}' }}
+          TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
+          CHANNEL_ID: ${{ secrets.CHANNEL_ID }}
         run: python bulls_signals_bot.py
