@@ -1,7 +1,7 @@
 name: Bulls Signals Bot
 
 on:
-    schedule:
+  schedule:
     # كل 30 دقيقة لمدة 15 ساعة (00:00 - 14:30 UTC)
     - cron: '0 0 * * *'     # 00:00
     - cron: '30 0 * * *'    # 00:30
