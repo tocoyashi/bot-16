@@ -25,7 +25,7 @@ SL_PERCENT = 1.5
 
 # ✅ هدفان فقط
 TP1_PERCENT = 0.85
-TP2_PERCENT = 2.6  # <--- تم التعديل إلى 2.6%
+TP2_PERCENT = 2.6  # تم التعديل إلى 2.6%
 
 # ✅ فلتر شمعة اليوم: جسم أصغر من 0.3% = لا تداول
 MIN_DAILY_BODY = 0.3
@@ -42,11 +42,13 @@ COOLDOWN_FILE = Path('cooldown.json')
 # ✅ قائمة بيضاء بأزواج Futures الموثوقة فقط
 WHITELIST = [
     "BTC/USDT", "ETH/USDT", "BNB/USDT", "SOL/USDT", "XRP/USDT",
-    "LINK/USDT", "AVAX/USDT", "ADA/USDT", "DOT/USDT", "LTC/USDT",
-    "TRX/USDT", "UNI/USDT", "ATOM/USDT", "XLM/USDT", "FIL/USDT",
-    "NEAR/USDT", "SUI/USDT", "SEI/USDT", "INJ/USDT", "APT/USDT",
-    "AAVE/USDT", "FET/USDT", "RENDER/USDT", "TIA/USDT", "ONDO/USDT",
-    "ARB/USDT", "OP/USDT"
+    "ADA/USDT", "DOGE/USDT", "AVAX/USDT", "DOT/USDT", "LINK/USDT",
+    "TRX/USDT", "LTC/USDT", "UNI/USDT", "ATOM/USDT", "XLM/USDT",
+    "NEAR/USDT", "APT/USDT", "SUI/USDT", "ARB/USDT", "OP/USDT",
+    "INJ/USDT", "FIL/USDT", "AAVE/USDT", "QNT/USDT", "FET/USDT",
+    "RENDER/USDT", "TIA/USDT", "SEI/USDT", "PYTH/USDT", "STRK/USDT",
+    "WLD/USDT", "ENA/USDT", "WIF/USDT", "BONK/USDT", "PEPE/USDT",
+    "SHIB/USDT", "FLOKI/USDT", "BOME/USDT", "W/USDT", "JUP/USDT"
 ]
 
 STABLECOINS = ['USDC/USDT', 'TUSD/USDT', 'DAI/USDT', 'FDUSD/USDT', 'USDP/USDT', 'PYUSD/USDT']
@@ -54,11 +56,11 @@ BLACKLIST = ['WXT/USDT', 'ANTFUN/USDT', 'UPC/USDT', 'RAIN/USDT', 'USD1/USDT', 'U
 
 
 def _fmt(price):
-    if price >= 1000:   
+    if price >= 1000:
         return f"{price:,.2f}"
-    elif price >= 1:    
+    elif price >= 1:
         return f"{price:,.4f}"
-    else:              
+    else:
         return f"{price:,.6f}"
 
 
@@ -252,8 +254,8 @@ def analyze_symbol(symbol, direction):
 
         if direction == "LONG":
             ema_aligned = ema9 > ema21
-            touched = candle_low <= ema21          # السعر لمس EMA21
-            bounced = entry > ema21                # وأغلق فوقها
+            touched = candle_low <= ema21
+            bounced = entry > ema21
             rsi_ok = 50 < rsi <= 75
             macd_ok = macd_hist > 0 or macd_hist > macd_hist_prev
 
@@ -261,9 +263,12 @@ def analyze_symbol(symbol, direction):
                 print(f"  {symbol}: No LONG setup (EMA9/21: {ema9:.4f}/{ema21:.4f}, RSI: {rsi:.1f}, MACD: {macd_hist:.5f})")
                 return None
 
-            if rsi_prev <= 50 < rsi: confidence += 10   # تقاطع RSI صاعد
-            if macd_hist > 0: confidence += 5
-            if vol_now > vol_avg * 1.2: confidence += 5
+            if rsi_prev <= 50 < rsi:
+                confidence += 10
+            if macd_hist > 0:
+                confidence += 5
+            if vol_now > vol_avg * 1.2:
+                confidence += 5
 
             sl = entry * (1 - SL_PERCENT / 100)
             tp1 = entry * (1 + TP1_PERCENT / 100)
@@ -271,8 +276,8 @@ def analyze_symbol(symbol, direction):
 
         else:  # SHORT
             ema_aligned = ema9 < ema21
-            touched = candle_high >= ema21         # السعر لمس EMA21
-            bounced = entry < ema21                # وأغلق تحتها
+            touched = candle_high >= ema21
+            bounced = entry < ema21
             rsi_ok = 25 <= rsi < 50
             macd_ok = macd_hist < 0 or macd_hist < macd_hist_prev
 
@@ -280,9 +285,12 @@ def analyze_symbol(symbol, direction):
                 print(f"  {symbol}: No SHORT setup (EMA9/21: {ema9:.4f}/{ema21:.4f}, RSI: {rsi:.1f}, MACD: {macd_hist:.5f})")
                 return None
 
-            if rsi_prev >= 50 > rsi: confidence += 10   # تقاطع RSI هابط
-            if macd_hist < 0: confidence += 5
-            if vol_now > vol_avg * 1.2: confidence += 5
+            if rsi_prev >= 50 > rsi:
+                confidence += 10
+            if macd_hist < 0:
+                confidence += 5
+            if vol_now > vol_avg * 1.2:
+                confidence += 5
 
             sl = entry * (1 + SL_PERCENT / 100)
             tp1 = entry * (1 - TP1_PERCENT / 100)
@@ -310,27 +318,35 @@ def analyze_symbol(symbol, direction):
 
 
 def build_message(signal):
+    """
+    ✅ الصيغة القياسية المتوافقة مع Cornix
+    - # قبل اسم الزوج ليتعرف Cornix على العملة فوراً
+    - Entry: Market للدخول الفوري (بدون انتظار)
+    - الرموز 🎯 ✅ 🛑 لتسهيل التعرف على TP و SL
+    """
     pair = signal['symbol'].replace('/', '')
     direction = signal['direction']
-    
-    msg = f"""Daily Candles Start - Asian Markets
-Trading Hours : 00:00 to 15:00 UTC
+    icon = "🟢" if direction == "LONG" else "🔴"
 
-Pairs : {pair} 
-Position: {direction}
-Leverage: Cross {LEVERAGE}x 
-Entry: {_fmt(signal['entry'])}
+    msg = f"""{icon} #{pair} {direction}
 
-SL: {_fmt(signal['sl'])}
+📌 Entry: Market
+📍 Entry Price: {_fmt(signal['entry'])}
 
-Targets:
-TP1 - {_fmt(signal['tp1'])}
-TP2 - {_fmt(signal['tp2'])}
+🎯 Take Profit:
+✅ TP1: {_fmt(signal['tp1'])}
+✅ TP2: {_fmt(signal['tp2'])}
+
+🛑 Stop Loss: {_fmt(signal['sl'])}
+
+⚙️ Leverage: Cross {LEVERAGE}x
+⏰ Trading Hours: 00:00 to 15:00 UTC
+
 -----------
 Trade Crypto Forex & Gold  
 Don't Miss The Daily prizes
 https://bingx.com/invite/0S0T4S"""
-    
+
     return msg
 
 
