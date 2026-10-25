@@ -25,13 +25,12 @@ SL_PERCENT = 1.5
 
 # ✅ هدفان فقط
 TP1_PERCENT = 0.85
-TP2_PERCENT = 2.0
+TP2_PERCENT = 2.6  # <--- تم التعديل إلى 2.6%
 
 # ✅ فلتر شمعة اليوم: جسم أصغر من 0.3% = لا تداول
 MIN_DAILY_BODY = 0.3
 
 # ✅ نافذة التداول: أول 15 ساعة من اليوم (00:00 - 15:00 UTC)
-# تغطي الجلسات الآسيوية، الأوروبية، وبداية الأمريكية
 TRADING_WINDOW_HOURS = 15
 
 # Quality Filters
@@ -57,9 +56,12 @@ BLACKLIST = ['WXT/USDT', 'ANTFUN/USDT', 'UPC/USDT', 'RAIN/USDT', 'USD1/USDT', 'U
 
 
 def _fmt(price):
-    if price >= 1000:   return f"{price:,.2f}"
-    elif price >= 1:    return f"{price:,.4f}"
-    else:              return f"{price:,.6f}"
+    if price >= 1000:   
+        return f"{price:,.2f}"
+    elif price >= 1:    
+        return f"{price:,.4f}"
+    else:              
+        return f"{price:,.6f}"
 
 
 def load_cooldown():
@@ -149,7 +151,7 @@ def calculate_atr(df, period=14):
 
 
 def in_trading_window():
-    """أول 9 ساعات بعد إغلاق الشمعة اليومية (00:00 - 09:00 UTC)"""
+    """أول 15 ساعة من اليوم (00:00 - 15:00 UTC)"""
     now_utc = datetime.utcnow()
     return now_utc.hour < TRADING_WINDOW_HOURS
 
@@ -312,8 +314,9 @@ def analyze_symbol(symbol, direction):
 def build_message(signal):
     pair = signal['symbol'].replace('/', '')
     direction = signal['direction']
-
-    msg = f"""New Algo Signal 🦋
+    
+    msg = f"""Daily Candles Start - Asian Markets
+Trading Hours : 00:00 to 15:00 UTC
 
 Pairs : {pair} 
 Position: {direction}
@@ -322,13 +325,14 @@ Entry: {_fmt(signal['entry'])}
 
 SL: {_fmt(signal['sl'])}
 
-Targets
+Targets:
 TP1 - {_fmt(signal['tp1'])}
 TP2 - {_fmt(signal['tp2'])}
 -----------
-Trade on Weex - Win up to 10k 🔥
-https://www.weex.com/register?vipCode=0s0t4s"""
-
+Trade Crypto Forex & Gold  
+Don't Miss The Daily prizes
+https://bingx.com/invite/0S0T4S"""
+    
     return msg
 
 
@@ -342,7 +346,7 @@ def main():
         print("ERROR: TELEGRAM_TOKEN and CHANNEL_ID must be set!")
         return
 
-    # ✅ فلتر النافذة الزمنية: أول 6 ساعات فقط بعد إغلاق الشمعة اليومية
+    # ✅ فلتر النافذة الزمنية: أول 15 ساعة فقط
     if not in_trading_window():
         print(f"Outside trading window (allowed: 00:00–{TRADING_WINDOW_HOURS:02d}:00 UTC). Exiting.")
         return
