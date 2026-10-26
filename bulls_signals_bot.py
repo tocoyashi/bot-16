@@ -39,7 +39,7 @@ VOLUME_LOOKBACK = 20
 COOLDOWN_HOURS = 1
 COOLDOWN_FILE = Path('cooldown.json')
 
-# ✅ قائمة بيضاء بأزواج Futures الموثوقة فقط
+# ✅ قائمة بيضاء محدثة (تم حذف SHIB و BONK)
 WHITELIST = [
     "BTC/USDT", "ETH/USDT", "BNB/USDT", "SOL/USDT", "XRP/USDT",
     "ADA/USDT", "DOGE/USDT", "AVAX/USDT", "DOT/USDT", "LINK/USDT",
@@ -47,8 +47,8 @@ WHITELIST = [
     "NEAR/USDT", "APT/USDT", "SUI/USDT", "ARB/USDT", "OP/USDT",
     "INJ/USDT", "FIL/USDT", "AAVE/USDT", "QNT/USDT", "FET/USDT",
     "RENDER/USDT", "TIA/USDT", "SEI/USDT", "PYTH/USDT", "STRK/USDT",
-    "WLD/USDT", "ENA/USDT", "WIF/USDT", "BONK/USDT", "PEPE/USDT",
-    "SHIB/USDT", "FLOKI/USDT", "BOME/USDT", "W/USDT", "JUP/USDT"
+    "WLD/USDT", "ENA/USDT", "WIF/USDT", "BOME/USDT", "PEPE/USDT",
+    "FLOKI/USDT", "W/USDT", "JUP/USDT"
 ]
 
 STABLECOINS = ['USDC/USDT', 'TUSD/USDT', 'DAI/USDT', 'FDUSD/USDT', 'USDP/USDT', 'PYUSD/USDT']
@@ -170,7 +170,6 @@ def get_daily_bias(symbol):
 
         today_utc = datetime.utcnow().date()
         last = df.iloc[-1]
-        # إذا كانت آخر شمعة لا تزال تتشكل اليوم → اعتمد شمعة الأمس المغلقة
         if last.name.date() >= today_utc:
             candle = df.iloc[-2]
         else:
@@ -220,7 +219,7 @@ def analyze_symbol(symbol, direction):
         df_15m['atr_pct'] = (df_15m['atr'] / df_15m['close']) * 100
         df_15m['vol_sma'] = df_15m['volume'].rolling(window=VOLUME_LOOKBACK).mean()
 
-        # ✅ آخر شمعة 15m *مغلقة* (الشمعة الحالية قد لا تكون مكتملة)
+        # ✅ آخر شمعة 15m *مغلقة*
         i = -2
         ema9 = df_15m['ema9'].iloc[i]
         ema21 = df_15m['ema21'].iloc[i]
@@ -331,8 +330,6 @@ def build_message(signal):
     msg = f"""{icon} #{pair} {direction}
 
 📌 Entry: Market
-📍 Entry Price: {_fmt(signal['entry'])}
-
 🎯 Take Profit:
 ✅ TP1: {_fmt(signal['tp1'])}
 ✅ TP2: {_fmt(signal['tp2'])}
@@ -383,7 +380,6 @@ def main():
                 skipped_cooldown += 1
                 continue
 
-            # تحديد اتجاه اليوم من شمعة الأمس (مع تخزين مؤقت لعدم تكرار الطلبات)
             if symbol not in daily_bias_cache:
                 time.sleep(0.3)
                 daily_bias_cache[symbol] = get_daily_bias(symbol)
