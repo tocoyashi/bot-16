@@ -30,8 +30,8 @@ TP2_PERCENT = 2.6  # تم التعديل إلى 2.6%
 # ✅ فلتر شمعة اليوم: جسم أصغر من 0.3% = لا تداول
 MIN_DAILY_BODY = 0.3
 
-# ✅ نافذة التداول: أول 15 ساعة من اليوم (00:00 - 15:00 UTC)
-TRADING_WINDOW_HOURS = 15
+# ✅ نافذة التداول: أول 5 ساعة من اليوم (00:00 - 15:00 UTC)
+TRADING_WINDOW_HOURS = 5
 
 # Quality Filters
 MIN_ATR_PERCENT = 0.03
