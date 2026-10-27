@@ -44,7 +44,9 @@ WHITELIST = [
     "TRX/USDT", "LTC/USDT", "UNI/USDT", "ATOM/USDT", "XLM/USDT",
     "NEAR/USDT", "APT/USDT", "SUI/USDT", "ARB/USDT", "OP/USDT",
     "INJ/USDT", "FIL/USDT", "AAVE/USDT", "QNT/USDT", "FET/USDT",
-    "RENDER/USDT"
+    "RENDER/USDT", "TIA/USDT", "SEI/USDT", "PYTH/USDT", "STRK/USDT",
+    "WLD/USDT", "ENA/USDT", "WIF/USDT", "BONK/USDT", "PEPE/USDT",
+    "SHIB/USDT", "FLOKI/USDT", "BOME/USDT", "W/USDT", "JUP/USDT"
 ]
 
 STABLECOINS = ['USDC/USDT', 'TUSD/USDT', 'DAI/USDT', 'FDUSD/USDT', 'USDP/USDT', 'PYUSD/USDT']
@@ -372,21 +374,31 @@ def analyze_symbol(symbol, direction):
 
 
 def build_message(signal):
+    """
+    ✅ الصيغة القياسية المتوافقة مع Cornix
+    - # قبل اسم الزوج ليتعرف Cornix على العملة فوراً
+    - Entry: Market للدخول الفوري (بدون انتظار)
+    """
     pair = signal['symbol'].replace('/', '')
     direction = signal['direction']
+    icon = "🟢" if direction == "LONG" else "🔴"
     
-    msg = f"""New Algo Signal 🦋
-Pairs : {pair}
-Position: {direction}
-Leverage: Cross {LEVERAGE}x
-Entry: {_fmt(signal['entry'])}
-SL: {_fmt(signal['sl'])}
-Targets
-TP1 - {_fmt(signal['tp1'])}
-TP2 - {_fmt(signal['tp2'])}
+    msg = f"""{icon} #{pair} {direction}
+
+📌 Entry: Market
+🎯 Take Profit:
+✅ TP1: {_fmt(signal['tp1'])}
+✅ TP2: {_fmt(signal['tp2'])}
+
+🛑 Stop Loss: {_fmt(signal['sl'])}
+
+⚙️ Leverage: Cross {LEVERAGE}x
+⏰ Trading Hours: 00:00 to 15:00 UTC
+
 -----------
-Trade on Weex - Win up to 10k 🔥
-https://www.weex.com/register?vipCode=0s0t4s"""
+Trade Crypto Forex & Gold  
+Don't Miss The Daily prizes
+https://bingx.com/invite/0S0T4S"""
     
     return msg
 
