@@ -25,13 +25,11 @@ SL_PERCENT = 1.5
 
 # ✅ هدفان فقط
 TP1_PERCENT = 0.85
-TP2_PERCENT = 2.6  # تم التعديل إلى 2.6%
+TP2_PERCENT = 2.0
 
-# ✅ فلتر شمعة اليوم: جسم أصغر من 0.3% = لا تداول
-MIN_DAILY_BODY = 0.3
-
-# ✅ نافذة التداول: أول 5 ساعة من اليوم (00:00 - 15:00 UTC)
-TRADING_WINDOW_HOURS = 5
+# ✅ نافذة التداول: أول 15 ساعة من اليوم (00:00 - 15:00 UTC)
+# تغطي: آسيا + أوروبا + أول ساعتين من أمريكا
+TRADING_WINDOW_HOURS = 15
 
 # Quality Filters
 MIN_ATR_PERCENT = 0.03
@@ -39,16 +37,14 @@ VOLUME_LOOKBACK = 20
 COOLDOWN_HOURS = 1
 COOLDOWN_FILE = Path('cooldown.json')
 
-# ✅ قائمة بيضاء محدثة (تم حذف SHIB و BONK)
+# ✅ قائمة بيضاء بأزواج Futures الموثوقة فقط
 WHITELIST = [
     "BTC/USDT", "ETH/USDT", "BNB/USDT", "SOL/USDT", "XRP/USDT",
     "ADA/USDT", "DOGE/USDT", "AVAX/USDT", "DOT/USDT", "LINK/USDT",
     "TRX/USDT", "LTC/USDT", "UNI/USDT", "ATOM/USDT", "XLM/USDT",
     "NEAR/USDT", "APT/USDT", "SUI/USDT", "ARB/USDT", "OP/USDT",
     "INJ/USDT", "FIL/USDT", "AAVE/USDT", "QNT/USDT", "FET/USDT",
-    "RENDER/USDT", "TIA/USDT", "SEI/USDT", "PYTH/USDT", "STRK/USDT",
-    "WLD/USDT", "ENA/USDT", "WIF/USDT", "BOME/USDT", "PEPE/USDT",
-    "FLOKI/USDT", "W/USDT", "JUP/USDT"
+    "RENDER/USDT"
 ]
 
 STABLECOINS = ['USDC/USDT', 'TUSD/USDT', 'DAI/USDT', 'FDUSD/USDT', 'USDP/USDT', 'PYUSD/USDT']
@@ -156,47 +152,98 @@ def in_trading_window():
     return now_utc.hour < TRADING_WINDOW_HOURS
 
 
+# ══════════════════════════════════════════════════════════════
+# ✅ الاستراتيجية الجديدة: تحديد الاتجاه بـ EMA 20/50
+# ══════════════════════════════════════════════════════════════
+
+def get_trend_from_ema(df, ema_short=20, ema_long=50):
+    """
+    يحدد الاتجاه بناءً على EMA 20 و EMA 50 (بشكل مرن):
+    
+    لـ LONG:
+    - EMA 20 > EMA 50 (شرط أساسي)
+    - السعر فوق EMA 20 أو EMA 50 (أي واحد مقبول)
+    
+    لـ SHORT:
+    - EMA 20 < EMA 50 (شرط أساسي)
+    - السعر تحت EMA 20 أو EMA 50 (أي واحد مقبول)
+    """
+    if len(df) < ema_long + 5:
+        return None
+    
+    df['ema20'] = df['close'].ewm(span=ema_short, adjust=False).mean()
+    df['ema50'] = df['close'].ewm(span=ema_long, adjust=False).mean()
+    
+    last_close = df['close'].iloc[-1]
+    ema20 = df['ema20'].iloc[-1]
+    ema50 = df['ema50'].iloc[-1]
+    
+    # LONG: EMA 20 > EMA 50 والسعر فوق EMA 20 أو EMA 50
+    if ema20 > ema50 and (last_close > ema20 or last_close > ema50):
+        return "LONG"
+    
+    # SHORT: EMA 20 < EMA 50 والسعر تحت EMA 20 أو EMA 50
+    if ema20 < ema50 and (last_close < ema20 or last_close < ema50):
+        return "SHORT"
+    
+    return None
+
+
 def get_daily_bias(symbol):
     """
-    يحدد اتجاه اليوم من آخر شمعة يومية مغلقة:
-    - شمعة خضراء (إغلاق > افتتاح) → LONG فقط
-    - شمعة حمراء (إغلاق < افتتاح) → SHORT فقط
-    - جسم أصغر من 0.3% → لا تداول (Doji)
+    الخطوة 1: تحديد الاتجاه من الفريم اليومي باستخدام EMA 20 و EMA 50
     """
     try:
-        df = get_mexc_data(symbol, '1d', limit=30)
-        if len(df) < 5:
+        df = get_mexc_data(symbol, '1d', limit=100)
+        if len(df) < 55:
             return None
-
-        today_utc = datetime.utcnow().date()
-        last = df.iloc[-1]
-        if last.name.date() >= today_utc:
-            candle = df.iloc[-2]
-        else:
-            candle = df.iloc[-1]
-
-        o, c = float(candle['open']), float(candle['close'])
-        body_pct = abs(c - o) / o * 100
-
-        if body_pct < MIN_DAILY_BODY:
-            print(f"  {symbol}: Daily body too small ({body_pct:.2f}%) — Doji, skip")
+        
+        direction = get_trend_from_ema(df, 20, 50)
+        
+        if direction is None:
+            print(f"  {symbol}: No clear trend on Daily timeframe (EMA 20/50)")
             return None
-
-        return "LONG" if c > o else "SHORT"
+        
+        return direction
     except Exception as e:
         print(f"  {symbol}: Daily bias error - {e}")
         return None
 
 
+def confirm_trend_4h(symbol, expected_direction):
+    """
+    الخطوة 2: تأكيد الاتجاه من فريم 4 ساعات
+    يجب أن يكون الاتجاه على 4H مطابقاً للاتجاه على 1D
+    """
+    try:
+        df = get_mexc_data(symbol, '4h', limit=100)
+        if len(df) < 55:
+            return False
+        
+        direction = get_trend_from_ema(df, 20, 50)
+        
+        if direction == expected_direction:
+            return True
+        else:
+            print(f"  {symbol}: 4H trend ({direction}) does not match Daily ({expected_direction})")
+            return False
+    except Exception as e:
+        print(f"  {symbol}: 4H confirmation error - {e}")
+        return False
+
+
 def analyze_symbol(symbol, direction):
+    """
+    الخطوة 3: البحث عن إشارة الدخول على فريم 15 دقيقة
+    """
     try:
         df_15m = get_mexc_data(symbol, TIMEFRAME_ENTRY, limit=100)
-        if len(df_15m) < 50:
+        if len(df_15m) < 55:
             return None
 
         # === Indicators on 15m ===
-        df_15m['ema9'] = df_15m['close'].ewm(span=9, adjust=False).mean()
-        df_15m['ema21'] = df_15m['close'].ewm(span=21, adjust=False).mean()
+        df_15m['ema20'] = df_15m['close'].ewm(span=20, adjust=False).mean()
+        df_15m['ema50'] = df_15m['close'].ewm(span=50, adjust=False).mean()
 
         # RSI
         delta = df_15m['close'].diff()
@@ -221,8 +268,8 @@ def analyze_symbol(symbol, direction):
 
         # ✅ آخر شمعة 15m *مغلقة*
         i = -2
-        ema9 = df_15m['ema9'].iloc[i]
-        ema21 = df_15m['ema21'].iloc[i]
+        ema20 = df_15m['ema20'].iloc[i]
+        ema50 = df_15m['ema50'].iloc[i]
         rsi = df_15m['rsi'].iloc[i]
         rsi_prev = df_15m['rsi'].iloc[i-1]
         macd_hist = df_15m['macd_hist'].iloc[i]
@@ -248,18 +295,22 @@ def analyze_symbol(symbol, direction):
             print(f"  {symbol}: Indicators not ready")
             return None
 
-        # === دخول الارتداد من EMA 21 باتجاه شمعة اليوم ===
+        # === دخول الارتداد من EMA 20 أو EMA 50 باتجاه الاتجاه العام ===
         confidence = 65
 
         if direction == "LONG":
-            ema_aligned = ema9 > ema21
-            touched = candle_low <= ema21
-            bounced = entry > ema21
+            ema_aligned = ema20 > ema50
+            # السعر لمس EMA 20 أو EMA 50 ثم ارتد
+            touched_ema20 = candle_low <= ema20 * 1.002
+            touched_ema50 = candle_low <= ema50 * 1.002
+            touched = touched_ema20 or touched_ema50
+            bounced = entry > ema20 or entry > ema50
+            
             rsi_ok = 50 < rsi <= 75
             macd_ok = macd_hist > 0 or macd_hist > macd_hist_prev
 
             if not (ema_aligned and touched and bounced and rsi_ok and macd_ok):
-                print(f"  {symbol}: No LONG setup (EMA9/21: {ema9:.4f}/{ema21:.4f}, RSI: {rsi:.1f}, MACD: {macd_hist:.5f})")
+                print(f"  {symbol}: No LONG setup (EMA20/50: {ema20:.4f}/{ema50:.4f}, RSI: {rsi:.1f}, MACD: {macd_hist:.5f})")
                 return None
 
             if rsi_prev <= 50 < rsi:
@@ -274,14 +325,18 @@ def analyze_symbol(symbol, direction):
             tp2 = entry * (1 + TP2_PERCENT / 100)
 
         else:  # SHORT
-            ema_aligned = ema9 < ema21
-            touched = candle_high >= ema21
-            bounced = entry < ema21
+            ema_aligned = ema20 < ema50
+            # السعر لمس EMA 20 أو EMA 50 ثم ارتد
+            touched_ema20 = candle_high >= ema20 * 0.998
+            touched_ema50 = candle_high >= ema50 * 0.998
+            touched = touched_ema20 or touched_ema50
+            bounced = entry < ema20 or entry < ema50
+            
             rsi_ok = 25 <= rsi < 50
             macd_ok = macd_hist < 0 or macd_hist < macd_hist_prev
 
             if not (ema_aligned and touched and bounced and rsi_ok and macd_ok):
-                print(f"  {symbol}: No SHORT setup (EMA9/21: {ema9:.4f}/{ema21:.4f}, RSI: {rsi:.1f}, MACD: {macd_hist:.5f})")
+                print(f"  {symbol}: No SHORT setup (EMA20/50: {ema20:.4f}/{ema50:.4f}, RSI: {rsi:.1f}, MACD: {macd_hist:.5f})")
                 return None
 
             if rsi_prev >= 50 > rsi:
@@ -317,39 +372,29 @@ def analyze_symbol(symbol, direction):
 
 
 def build_message(signal):
-    """
-    ✅ الصيغة القياسية المتوافقة مع Cornix
-    - # قبل اسم الزوج ليتعرف Cornix على العملة فوراً
-    - Entry: Market للدخول الفوري (بدون انتظار)
-    - الرموز 🎯 ✅ 🛑 لتسهيل التعرف على TP و SL
-    """
     pair = signal['symbol'].replace('/', '')
     direction = signal['direction']
-    icon = "🟢" if direction == "LONG" else "🔴"
-
-    msg = f"""{icon} #{pair} {direction}
-
-📌 Entry: Market
-🎯 Take Profit:
-✅ TP1: {_fmt(signal['tp1'])}
-✅ TP2: {_fmt(signal['tp2'])}
-
-🛑 Stop Loss: {_fmt(signal['sl'])}
-
-⚙️ Leverage: Cross {LEVERAGE}x
-⏰ Trading Hours: 00:00 to 15:00 UTC
-
+    
+    msg = f"""New Algo Signal 🦋
+Pairs : {pair}
+Position: {direction}
+Leverage: Cross {LEVERAGE}x
+Entry: {_fmt(signal['entry'])}
+SL: {_fmt(signal['sl'])}
+Targets
+TP1 - {_fmt(signal['tp1'])}
+TP2 - {_fmt(signal['tp2'])}
 -----------
-Trade Crypto Forex & Gold  
-Don't Miss The Daily prizes
-https://bingx.com/invite/0S0T4S"""
-
+Trade on Weex - Win up to 10k 🔥
+https://www.weex.com/register?vipCode=0s0t4s"""
+    
     return msg
 
 
 def main():
     print("=" * 50)
-    print("New Algo Signals — Daily Bias Bot (v4.0)")
+    print("Multi-Timeframe EMA Bot (v5.0)")
+    print("Strategy: EMA 20/50 on 1D + 4H + 15m")
     print(f"Time (UTC): {datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S')}")
     print("=" * 50)
 
@@ -373,13 +418,14 @@ def main():
     skipped_filter = 0
     daily_bias_cache = {}
 
-    print("\nScanning coins...")
+    print("\nScanning coins (Multi-Timeframe Analysis)...")
     for symbol in top_coins:
         try:
             if is_on_cooldown(symbol, cooldown_data):
                 skipped_cooldown += 1
                 continue
 
+            # 1️⃣ الخطوة الأولى: تحديد الاتجاه من الفريم اليومي (EMA 20/50)
             if symbol not in daily_bias_cache:
                 time.sleep(0.3)
                 daily_bias_cache[symbol] = get_daily_bias(symbol)
@@ -389,6 +435,13 @@ def main():
                 skipped_filter += 1
                 continue
 
+            # 2️⃣ الخطوة الثانية: تأكيد الاتجاه من فريم 4 ساعات
+            time.sleep(0.3)
+            if not confirm_trend_4h(symbol, direction):
+                skipped_filter += 1
+                continue
+
+            # 3️⃣ الخطوة الثالثة: البحث عن إشارة الدخول على فريم 15 دقيقة
             time.sleep(0.6)
             signal = analyze_symbol(symbol, direction)
 
